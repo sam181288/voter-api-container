@@ -1,4 +1,3 @@
-# //FIXME - version error and dockers are talking when we start and use
 version: '3.8'
 services:
   cache:

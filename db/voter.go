@@ -61,7 +61,6 @@ func NewWithCacheInstance(location string) (*VoterList, error) {
 
 	//We use this context to coordinate betwen our go code and
 	//the redis operaitons
-	//TODO see if I have to replace TODO with VOTERLIST
 	ctx := context.TODO()
 
 	//This is the reccomended way to ensure that our redis connection
