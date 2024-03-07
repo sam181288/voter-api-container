@@ -49,7 +49,7 @@ func newRandPollForVoter(id uint) db.VoterHistory {
 	}
 }
 
-func Test_LoadDB(t *testing.T) {
+func Test_AddVoters(t *testing.T) {
 	numLoad := 3
 	for i := 0; i < numLoad; i++ {
 
@@ -61,6 +61,17 @@ func Test_LoadDB(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 200, rsp.StatusCode())
 	}
+}
+
+// test for not able to add a voter with the same id
+func Test_AddVoterWithSameID(t *testing.T) {
+	item := newRandVoter(1)
+	rsp, err := cli.R().
+		SetBody(item).
+		Post(BASE_API + "/voters/1")
+
+	assert.Nil(t, err)
+	assert.Equal(t, 400, rsp.StatusCode())
 }
 
 func Test_GetAllVoters(t *testing.T) {
@@ -107,10 +118,8 @@ func Test_GetVoterPolls(t *testing.T) {
 	var items []db.VoterHistory
 
 	rsp, err := cli.R().SetResult(&items).Get(BASE_API + "/voters/1/polls")
-
 	assert.Nil(t, err)
 	assert.Equal(t, 200, rsp.StatusCode())
-
 	assert.Equal(t, 3, len(items))
 }
 
@@ -121,38 +130,54 @@ func Test_GetVoterPollByID(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 200, rsp.StatusCode())
+	//verify get
+	assert.Equal(t, uint(1), item.PollId)
 
 }
 
-// func Test_UpdateVoter(t *testing.T) {
-// 	item := newRandVoter(1)
-// 	rsp, err := cli.R().
-// 		SetBody(item).
-// 		Put(BASE_API + "/voters/1")
+func Test_UpdateVoter(t *testing.T) {
+	voter := newRandVoter(2)
+	rsp, err := cli.R().
+		SetBody(voter).
+		Put(BASE_API + "/voters/2")
 
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, 200, rsp.StatusCode())
-// }
+	assert.Nil(t, err)
+	assert.Equal(t, 200, rsp.StatusCode())
+	//verify the update
+	var voterFromDb db.Voter
+	rsp, err = cli.R().SetResult(&voterFromDb).Get(BASE_API + "/voters/2")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, rsp.StatusCode())
+	assert.Equal(t, voter.Name, voterFromDb.Name)
+}
 
-// func Test_UpdateVoterPollByID(t *testing.T) {
-// 	item := newRandPollForVoter(1)
-// 	rsp, err := cli.R().
-// 		SetBody(item).
-// 		Put(BASE_API + "/voters/1/polls/1")
+func Test_UpdateVoterPollByID(t *testing.T) {
+	voterPoll := newRandPollForVoter(2)
+	//convert to array
+	voterPollArray := []db.VoterHistory{voterPoll}
+	rsp, err := cli.R().
+		SetBody(voterPollArray).
+		Post(BASE_API + "/voters/2/polls/1")
 
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, 200, rsp.StatusCode())
-// }
+	assert.Nil(t, err)
+	assert.Equal(t, 200, rsp.StatusCode())
+	//verify the update
+	var voterPollFromDb db.VoterHistory
+	rsp, err = cli.R().SetResult(&voterPollFromDb).Get(BASE_API + "/voters/2/polls/1")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, rsp.StatusCode())
+	assert.Equal(t, voterPoll.VoteId, voterPollFromDb.VoteId)
+}
 
-// func Test_DeleteAllVoters(t *testing.T) {
-// 	rsp, err := cli.R().Delete(BASE_API + "/voters")
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, 200, rsp.StatusCode())
+func Test_DeleteAllVoters(t *testing.T) {
+	rsp, err := cli.R().Delete(BASE_API + "/voters")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, rsp.StatusCode())
 
-// 	rsp, err = cli.R().Get(BASE_API + "/voters")
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, 200, rsp.StatusCode())
+	rsp, err = cli.R().Get(BASE_API + "/voters")
+	assert.Nil(t, err)
+	assert.Equal(t, 200, rsp.StatusCode())
 
-// 	var items []db.Voter
-// 	assert.Equal(t, 0, len(items))
-// }
+	var items []db.Voter
+	assert.Equal(t, 0, len(items))
+}

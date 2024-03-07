@@ -15,6 +15,10 @@ type VoterAPI struct {
 	db *db.VoterList
 }
 
+type ErrorMessage struct {
+	Error string `json:"error"`
+}
+
 func New() (*VoterAPI, error) {
 	dbHandler, err := db.NewVoterList()
 	if err != nil {
@@ -24,19 +28,7 @@ func New() (*VoterAPI, error) {
 	return &VoterAPI{db: dbHandler}, nil
 }
 
-//Below we implement the API functions.  Some of the framework
-//things you will see include:
-//   1) How to extract a parameter from the URL, for example
-//	  the id parameter in /todo/:id
-//   2) How to extract the body of a POST request
-//   3) How to return JSON and a correctly formed HTTP status code
-//	  for example, 200 for OK, 404 for not found, etc.  This is done
-//	  using the c.JSON() function
-//   4) How to return an error code and abort the request.  This is
-//	  done using the c.AbortWithStatus() function
-
 // implementation for GET /voters
-// returns all todos
 func (td *VoterAPI) ListAllVoters(c *fiber.Ctx) error {
 
 	voterList, err := td.db.GetAllVoters()
@@ -48,14 +40,12 @@ func (td *VoterAPI) ListAllVoters(c *fiber.Ctx) error {
 
 	if voterList == nil {
 		voterList = make([]db.Voter, 0)
-		//todoList = make([]db.ToDoItem, 0)
 	}
 
 	return c.JSON(voterList)
 }
 
 // implementation for GET /voters/:id
-// returns a single todo
 func (td *VoterAPI) GetVoterByID(c *fiber.Ctx) error {
 
 	id, err := c.ParamsInt("id")
@@ -68,14 +58,12 @@ func (td *VoterAPI) GetVoterByID(c *fiber.Ctx) error {
 	voter, err := td.db.GetVoter(idUint)
 	if err != nil {
 		log.Println("Item not found: ", err)
-		return fiber.NewError(http.StatusNotFound)
+		return c.Status(fiber.StatusNotFound).JSON(ErrorMessage{Error: "Voter does not exist"})
 	}
 
 	return c.JSON(voter)
 }
 
-// implementation for POST /todo
-// adds a new todo
 func (td *VoterAPI) AddVoter(c *fiber.Ctx) error {
 	var voter db.Voter
 
@@ -86,7 +74,7 @@ func (td *VoterAPI) AddVoter(c *fiber.Ctx) error {
 
 	if err := td.db.AddVoter(voter); err != nil {
 		log.Println("Error adding item: ", err)
-		return fiber.NewError(http.StatusInternalServerError)
+		return c.Status(fiber.StatusBadRequest).JSON(ErrorMessage{Error: err.Error()})
 	}
 
 	return c.JSON(voter)
@@ -165,12 +153,12 @@ func (td *VoterAPI) AddVoterPollById(c *fiber.Ctx) error {
 
 	voter.VoteHistory = append(voter.VoteHistory, db.VoterHistory{PollId: pollidUint, VoteId: idUint, VoteDate: time.Now()})
 
-	if err := td.db.UpdateVoter(voter); err != nil {
+	if err := td.db.UpdateVoter(*voter); err != nil {
 		log.Println("Error updating voter: ", err)
 		return fiber.NewError(http.StatusInternalServerError)
 	}
 
-	return c.JSON(voter)
+	return nil
 }
 
 // implementation for DELETE /voters
@@ -202,6 +190,10 @@ func (td *VoterAPI) UpdateVoter(c *fiber.Ctx) error {
 		log.Println("Error binding JSON: ", err)
 		return fiber.NewError(http.StatusBadRequest)
 	}
+	if err := td.db.UpdateVoter(*voter); err != nil {
+		log.Println("Error updating voter: ", err)
+		return fiber.NewError(http.StatusInternalServerError)
+	}
 	return c.SendStatus(http.StatusOK)
 }
 
@@ -230,9 +222,14 @@ func (td *VoterAPI) UpdateVoterPollById(c *fiber.Ctx) error {
 				log.Println("Error binding JSON: ", err)
 				return fiber.NewError(http.StatusBadRequest)
 			}
+			if err := td.db.UpdateVoter(*voter); err != nil {
+				log.Println("Error updating voter poll: ", err)
+				return fiber.NewError(http.StatusInternalServerError)
+			}
 			break
 		}
 	}
+
 	return c.SendStatus(http.StatusOK)
 }
 

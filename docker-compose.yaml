@@ -1,0 +1,18 @@
+# //FIXME - version error and dockers are talking when we start and use
+version: '3.8'
+services:
+  cache:
+    image: redis/redis-stack:latest
+    container_name: voter-cache
+    restart: always
+    ports:
+      - 6379:6379
+      - 8001:8001
+  voter-api:
+    image: voter-api-basic:v2
+    container_name: voter-api-2
+    restart: always
+    ports:
+      - 1080:1080
+    depends_on:
+      - cache
